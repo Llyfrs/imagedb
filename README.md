@@ -1,5 +1,7 @@
 # imagedb
 
+> Full Disclaimer this entier project was generated using Cursor. It was just idea I had and it seemed like something AI could do easily. 
+
 Clipboard-first image database with semantic search. Saves images directly from your clipboard, describes them via OpenRouter vision, embeds descriptions, stores vectors in LanceDB, and lets you retrieve images back to your clipboard by text query.
 
 ## Features
