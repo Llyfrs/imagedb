@@ -10,7 +10,7 @@ EMBEDDING_MODEL = "qwen/qwen3-embedding-8b"
 CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 EMBED_URL = "https://openrouter.ai/api/v1/embeddings"
 VISION_PROMPT = (
-    "Describe the image in detail. If there is any text present, fully transcribe it."
+    "Describe the image in detail. If there is any text present, fully transcribe it. Do not use any formating, keep it short (1-3 paragraphs)."
 )
 
 
