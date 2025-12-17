@@ -10,7 +10,12 @@ EMBEDDING_MODEL = "qwen/qwen3-embedding-8b"
 CHAT_URL = "https://openrouter.ai/api/v1/chat/completions"
 EMBED_URL = "https://openrouter.ai/api/v1/embeddings"
 VISION_PROMPT = (
-    "Describe the image in detail. If there is any text present, fully transcribe it. Do not use any markdown formatting."
+    "Provide a dense, objective description of the image for semantic search. "
+    "Identify main subjects, objects, setting, and actions. "
+    "Transcribe all visible text exactly. "
+    "Avoid introductory filler and flowery adjectives. "
+    "Focus on factual keywords and concise phrases. "
+    "No markdown."
 )
 
 
@@ -29,7 +34,8 @@ def describe_image(
     """
     b64 = base64.b64encode(image_bytes).decode("utf-8")
     prompt = (
-        f"{VISION_PROMPT} Additional context: {context}"
+        f"{VISION_PROMPT} Integrate the following user context to identify specific entities (like names) or capture the intended mood/emotion: {context}. "
+        "Use this information to inform your description naturally without repeating the context verbatim."
         if context
         else VISION_PROMPT
     )

@@ -8,6 +8,8 @@ from typing import Optional
 import typer
 from PIL import Image
 from rich import print
+from rich.table import Table
+from rich.prompt import Prompt
 
 from .clipboard import ClipboardError, copy_image_to_clipboard, read_image_from_clipboard
 from .config import DEFAULT_VISION_MODEL, load_config, save_config
@@ -130,11 +132,12 @@ def load_command(query: str):
 
     embedding = get_embedding(query, api_key=api_key)
     db = ImageDB()
-    result = db.search(embedding, limit=1)
-    if not result:
+    results = db.search(embedding, limit=1)
+    if not results:
         print("[yellow]No results found.[/yellow]")
         raise typer.Exit()
 
+    result = results[0]
     path_value = result.get("path") if isinstance(result, dict) else getattr(result, "path", None)
     if not path_value:
         print("[red]Result missing file path.[/red]")
@@ -147,6 +150,76 @@ def load_command(query: str):
 
     copy_image_to_clipboard(path)
     print(f"[green]Copied image to clipboard from {path}[/green]")
+
+
+@app.command("search")
+def search_command(query: str):
+    """
+    Search by text and show top 5 matches with metadata.
+    """
+    cfg = _require_config()
+    api_key = cfg["api_key"]
+
+    embedding = get_embedding(query, api_key=api_key)
+    db = ImageDB()
+    results = db.search(embedding, limit=5)
+
+    if not results:
+        print("[yellow]No results found.[/yellow]")
+        raise typer.Exit()
+
+    table = Table(title=f"Search Results for '{query}'")
+    table.add_column("#", style="cyan", no_wrap=True)
+    table.add_column("Distance", style="magenta")
+    table.add_column("Date", style="green")
+    table.add_column("Description")
+    table.add_column("Path", style="dim")
+
+    for idx, res in enumerate(results, start=1):
+        def get_field(item, name):
+            return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
+
+        dist = get_field(res, "_distance")
+        desc = get_field(res, "description")
+        created_at = get_field(res, "created_at")
+        path_val = get_field(res, "path")
+
+        dist_str = f"{dist:.4f}" if dist is not None else "N/A"
+        date_str = str(created_at)
+
+        table.add_row(str(idx), dist_str, date_str, desc, path_val)
+
+    print(table)
+
+    choices = [str(i) for i in range(1, len(results) + 1)]
+    choice = Prompt.ask(
+        "Select an image to copy",
+        choices=choices + ["q"],
+        default="q"
+    )
+
+    if choice == "q":
+        raise typer.Exit()
+
+    selected_idx = int(choice) - 1
+    selected_res = results[selected_idx]
+
+    def get_field(item, name):
+        return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
+
+    path_value = get_field(selected_res, "path")
+    
+    if not path_value:
+         print("[red]Result missing file path.[/red]")
+         raise typer.Exit(code=1)
+
+    path = Path(path_value)
+    if not path.exists():
+        print(f"[red]Image file missing at {path}[/red]")
+        raise typer.Exit(code=1)
+
+    copy_image_to_clipboard(path)
+    print(f"[green]Copied image #{choice} to clipboard from {path}[/green]")
 
 
 def main():

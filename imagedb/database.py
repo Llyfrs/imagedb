@@ -58,8 +58,5 @@ class ImageDB:
         # This is the "magic" line for vector search
         results = self.table.search(query_vector).limit(limit).to_list()
         
-        if not results:
-            return None
-            
-        return results[0] # Return the best match
+        return results
 
