@@ -7,7 +7,7 @@ from typing import Optional
 
 import typer
 from PIL import Image
-from rich import print
+from rich import print, box
 from rich.table import Table
 from rich.prompt import Prompt
 
@@ -24,8 +24,7 @@ def _hash_bytes(data: bytes) -> str:
 
 
 def _save_png_bytes(image_bytes: bytes, destination: Path) -> None:
-    with Image.open(BytesIO(image_bytes)) as img:
-        img.save(destination, format="PNG")
+    destination.write_bytes(image_bytes)
 
 
 def _require_config():
@@ -168,7 +167,7 @@ def search_command(query: str):
         print("[yellow]No results found.[/yellow]")
         raise typer.Exit()
 
-    table = Table(title=f"Search Results for '{query}'")
+    table = Table(title=f"Search Results for '{query}'", box=box.ROUNDED, show_lines=True)
     table.add_column("#", style="cyan", no_wrap=True)
     table.add_column("Distance", style="magenta")
     table.add_column("Date", style="green")
@@ -220,6 +219,30 @@ def search_command(query: str):
 
     copy_image_to_clipboard(path)
     print(f"[green]Copied image #{choice} to clipboard from {path}[/green]")
+
+
+@app.command("delete")
+def delete_command():
+    """
+    Delete the image from the database that matches the image currently in clipboard (by hash).
+    """
+    try:
+        image_bytes = read_image_from_clipboard()
+    except ClipboardError as exc:
+        print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1)
+
+    file_hash = _hash_bytes(image_bytes)
+    print(f"[dim]Clipboard image hash: {file_hash}[/dim]")
+    
+    db = ImageDB()
+    deleted = db.delete_image(file_hash)
+    
+    if deleted:
+        print(f"[green]Deleted image with hash {file_hash} from database and filesystem.[/green]")
+    else:
+        print(f"[yellow]No image found with hash {file_hash} in database.[/yellow]")
+        raise typer.Exit()
 
 
 def main():

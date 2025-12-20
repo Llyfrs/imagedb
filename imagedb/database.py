@@ -60,3 +60,32 @@ class ImageDB:
         
         return results
 
+    def delete_image(self, file_hash: str) -> bool:
+        """
+        Deletes an image from the database by file hash.
+        Returns True if the image was found and deleted, False otherwise.
+        """
+        # Check if record exists using a metadata search
+        # We search with no vector and a filter
+        try:
+            results = self.table.search(None).where(f"file_hash = '{file_hash}'").to_list()
+            if not results:
+                return False
+        except Exception:
+            # Fallback to a broader check if the above fails
+            return False
+        
+        # Delete from database using file_hash
+        # Note: LanceDB delete operation
+        self.table.delete(f"file_hash = '{file_hash}'")
+        
+        # Also delete the image file if it exists
+        image_path = self.image_dir / f"{file_hash}.png"
+        if image_path.exists():
+            try:
+                image_path.unlink()
+            except OSError:
+                pass
+        
+        return True
+

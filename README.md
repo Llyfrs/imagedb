@@ -9,6 +9,7 @@ Clipboard-first image database with semantic search. Saves images directly from 
 - `imagedb save` — grab PNG from clipboard → describe → embed → store.
 - `imagedb load "<query>"` — embed query → vector search → copy best match to clipboard.
 - `imagedb search "<query>"` — search top 5 matches → show metadata table → interactive pick.
+- `imagedb delete` — delete image from database that matches the image currently in clipboard (by hash).
 - XDG paths: DB in `~/.local/share/imagedb/`, config in `~/.config/imagedb/config.yaml`.
 - Clipboard support for Wayland (`wl-copy`, `wl-paste`) and X11 (`xclip`).
 
@@ -32,6 +33,8 @@ Clipboard-first image database with semantic search. Saves images directly from 
   `uv run imagedb load "a sunset over a lake"`
 - Search and pick from top 5 matches:  
   `uv run imagedb search "a futuristic city"`
+- Delete image from database (matches clipboard image by hash):  
+  `uv run imagedb delete`
 - View/update config:  
   `uv run imagedb config --show`  
   `uv run imagedb config --api-key sk-or-...`  
@@ -45,7 +48,7 @@ Clipboard-first image database with semantic search. Saves images directly from 
    `uv tool update-shell`  
    Or manually add to your shell rc: `export PATH="$HOME/.local/bin:$PATH"`
 3) Run directly without `uv run`:  
-   `imagedb init` / `imagedb save` / `imagedb load "query"` / `imagedb search "query"`
+   `imagedb init` / `imagedb save` / `imagedb load "query"` / `imagedb search "query"` / `imagedb delete`
 
 ## Notes
 - Vision model default: `google/gemini-2.0-flash-lite-001` (configurable).
