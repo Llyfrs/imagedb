@@ -80,20 +80,35 @@ def save_command(
     context: Optional[str] = typer.Argument(
         None,
         help="Optional extra context to guide the description (e.g., names, places).",
-    )
+    ),
+    image: Optional[str] = typer.Option(
+        None, "--image", "-i", help="Path to image file instead of reading from clipboard."
+    ),
 ):
     """
-    Copy image from clipboard into the DB (describe + embed).
+    Copy image into the DB (describe + embed). Defaults to clipboard; use --image to provide a file path.
     """
     cfg = _require_config()
     api_key = cfg["api_key"]
     vision_model = cfg.get("vision_model", DEFAULT_VISION_MODEL)
 
-    try:
-        image_bytes = read_image_from_clipboard()
-    except ClipboardError as exc:
-        print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1)
+    if image:
+        image_path = Path(image)
+        if not image_path.exists():
+            print(f"[red]Image file not found at {image_path}[/red]")
+            raise typer.Exit(code=1)
+        image_bytes = image_path.read_bytes()
+        # delete source file after reading
+        try:
+            image_path.unlink()
+        except OSError:
+            pass
+    else:
+        try:
+            image_bytes = read_image_from_clipboard()
+        except ClipboardError as exc:
+            print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1)
 
     file_hash = _hash_bytes(image_bytes)
 
@@ -152,7 +167,10 @@ def load_command(query: str):
 
 
 @app.command("search")
-def search_command(query: str):
+def search_command(
+    query: str,
+    as_json: bool = typer.Option(False, "--json", help="Print results as JSON and exit (headless)."),
+):
     """
     Search by text and show top 5 matches with metadata.
     """
@@ -161,10 +179,28 @@ def search_command(query: str):
 
     embedding = get_embedding(query, api_key=api_key)
     db = ImageDB()
-    results = db.search(embedding, limit=5)
+    results = db.search(embedding, limit=20)
 
     if not results:
-        print("[yellow]No results found.[/yellow]")
+        if as_json:
+            print("[]")
+        else:
+            print("[yellow]No results found.[/yellow]")
+        raise typer.Exit()
+
+    if as_json:
+        import json
+        serialised = []
+        for res in results:
+            def get_field(item, name):
+                return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
+            serialised.append({
+                "path": get_field(res, "path"),
+                "description": get_field(res, "description"),
+                "distance": get_field(res, "_distance"),
+                "created_at": str(get_field(res, "created_at")),
+            })
+        print(json.dumps(serialised, indent=2))
         raise typer.Exit()
 
     table = Table(title=f"Search Results for '{query}'", box=box.ROUNDED, show_lines=True)
